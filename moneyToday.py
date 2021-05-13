@@ -63,11 +63,15 @@ class jungang_crawling:
                     #print(article_list[-1])
                     for article in article_list:
                         
+
                         article_time = article.find("span",{"class":"etc"}).string
+
                         meta = re.compile(r'\d{4}[.]\d{2}[.]\d{2}')
                         for i in meta.findall(article_time):
                             article_time = i
+
                         article_time = self.get_date(article_time)
+                        print(article_time)
                         if(int(article_time)<int(before_one_week)): # 내가 원하는 요일까지의 자료만 필요하다
                             return 
                         
@@ -84,7 +88,9 @@ class jungang_crawling:
 
                 pages = soup.find("div",{"id":"content"})
                 pages = pages.find("div",{"id":"paging_t17"})
-                current_page = pages.find("strong").string  # 현재 페이지 찾음
+                print(pages)
+                current_page = pages.find("span",{"class":"num"})# 현재 페이지 찾음
+                current_page = current_page.find("strong").string
                 #print(current_page)
                 next_button = pages.find("button",{"class":"next"})
 
@@ -92,18 +98,21 @@ class jungang_crawling:
                 pages = pages.find_all("a")
                 try:
                     for page in pages:
-
+                        
                         if(int(current_page)<int(page.string)):
                             next_url = page['href']
                             break
                     if(next_url!=""):
                         pass
                     else: #다음 화살표 누르기
+                        print(next_button)
                         next_url = next_button['onclick']
+                        print(next_url)
                         next_url = next_url[26:]
                         next_url = next_url[:len(next_url)-2]
                         print(next_url)
                     if(not News_end):
+                        print(next_url)
                         self.article_url = "https://news.mt.co.kr"+next_url
                 except:
                     print("페이지 이동 실패")
@@ -175,7 +184,7 @@ if __name__ == "__main__":
     # 그리고 그 번호를 get_news에다가도 넣어준다
 
     A = jungang_crawling()
-    A.category_crawling(1)
+    A.category_crawling(3)
     ll = A.get_news()
 
  
