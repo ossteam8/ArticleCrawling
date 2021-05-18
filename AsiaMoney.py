@@ -12,7 +12,7 @@ from datetime import datetime
 from dateutil.relativedelta import relativedelta
 from categoryparser import Parse_category
 
-class hangyere_crawling:
+class AsiaMoney_crawling:
     #type = 1: 카테고리만 입력
 
     def __init__(self): 
@@ -25,19 +25,16 @@ class hangyere_crawling:
         self.check_valid = True # 검색했을때 나오는 데이터가 나오는지 안나오는지를 비교
         self.num_article = 0
         self.choose_category=1
-    def get_date(self, now):
-        now = str(now)
-        year = now[:4]
-        month = now[5:7]
-        day = now[8:10]
-        return year+month+day
+    # 1일전 이전의 몇시간전의 데이터만 가져온다
+    def one_day_crawling(self, text_time):
+        if '일' in text_time:
+            return False
+        return True
 
     def crawling(self):
         News_end = False
-        now = datetime.now()
-        before_one_week = now-relativedelta(days=1) # 여기서 days값이 몇일전을의미 테스트용으론 1이 적당
-        before_one_week =  self.get_date(before_one_week) # 일주 전을 의미
         while(not News_end):
+            first_num = True
             print(self.article_url)
             with urllib.request.urlopen(self.article_url) as response:
                 
@@ -47,12 +44,13 @@ class hangyere_crawling:
                 #기사의 url들을 파싱하는 부분
             
 
-                article_list = soup.find("div",{"id":"container"})
-                article_list = article_list.find("div",{"class":"section-list-area"})# 안된다면 이부분을 넣자
+                article_list = soup.find("div",{"class":"content"})
+                #article_list = article_list.find("div",{"class":"section-list-area"})# 안된다면 이부분을 넣자
                 
                 
                 try:
-                    article_list = article_list.find_all("div",{"class":"list"})
+                    first_article = article_list.find("div",{"class":"list_type"})
+                    article_list = article_list.find_all("div",{"class":"listsm_type"})
                     
                 except:
                     self.check_valid=False
@@ -61,16 +59,22 @@ class hangyere_crawling:
                    
                 try:
                     #print(article_list[-1])
+
                     for article in article_list:
-                        
-                        article_time = article.find("span",{"class":"date"}).string
-                        article_time = self.get_date(article_time)
-                        if(int(article_time)<int(before_one_week)): # 내가 원하는 요일까지의 자료만 필요하다
-                            return 
-                        
-                        article = article.find("h4",{"class":"article-title"})
-                        link = article.find("a")
-                        link = "https://www.hani.co.kr"+link['href']
+                        if(first_num):
+                            f_article = first_article.find("a")
+                            f_time = first_article.find("span",{"class":"txt_time"}).string
+                            if(not self.one_day_crawling(f_time)):
+                                return
+                            link = 'https:'+ f_article['href']
+                            self.urls.append(link)
+
+                        article_time = article.find("span",{"class":"txt_time"}).string
+                        if(not self.one_day_crawling(article_time)):
+                                return
+                        article = article.find("a")
+                        link = 'https:'+ article['href']
+
                         self.urls.append(link)
                         print(link)
                 except:
@@ -80,25 +84,34 @@ class hangyere_crawling:
                 #try:
                 next_url = ""
 
-                pages = soup.find("div",{"id":"container"})
-                pages = pages.find("div",{"class":"paginate"})
-                current_page = pages.find("a",{"class":"selected"}).string  # 현재 페이지 찾음
-                next_button = pages.find("a",{"class":"next"})
+                pages = soup.find("div",{"class":"content"})
+                #pages = pages.find("span",{"class":"inner_paging"})
+                #print(pages)
+                current_page = pages.find("span",{"class":"link_page"}).string# 현재 페이지 찾음
                 
-                pages = pages.find_all("a")
+                #print(current_page)
+                next_button = pages.find("a",{"class":"btn_next"})
+
+                
+                pages = pages.find_all("a",{"class":"link_page"})
                 try:
                     for page in pages:
                         
-                        if page.string != "다음으로" and page.string!="이전으로":
-                            if(int(current_page)<int(page.string)):
-                                next_url = page['href']
-                                break
+                        if(int(current_page)<int(page.string)):
+                            next_url = page.string
+                            break
                     if(next_url!=""):
                         pass
                     else: #다음 화살표 누르기
-                        next_url = next_button['href']
+                        next_url = str(int(current_page)+1)
                     if(not News_end):
-                        self.article_url = "https://www.hani.co.kr"+next_url
+                        if(self.choose_category==1):
+                            self.article_url = "https://www.asiae.co.kr/list/politics-all/"+next_url
+                        elif(self.choose_category==2):
+                            self.article_url="https://www.asiae.co.kr/list/economy-all/"+next_url
+                        else:
+                            self.article_url = "https://www.asiae.co.kr/list/society-all/"+next_url
+                        
                 except:
                     print("페이지 이동 실패")
                     return
@@ -109,16 +122,15 @@ class hangyere_crawling:
     def category_crawling(self, choose_category):
         #동아일보는 url에 날짜를 넣으면 그 날짜만 가져온다
 
-        now = datetime.now()-relativedelta(days=1) # 실제엔 relative(days=1)을 빼자
-        now = self.get_date(now)
+        
         if choose_category==1: #정치
-            self.article_url = "https://www.hani.co.kr/arti/politics/home01.html"
+            self.article_url = "https://www.asiae.co.kr/list/politics-all"
             self.choose_category = 1
         elif choose_category==2: # 경제
-            self.article_url="https://www.hani.co.kr/arti/economy/home01.html"
+            self.article_url="https://www.asiae.co.kr/list/economy-all"
             self.choose_category = 2
         else: #사회
-            self.article_url = "https://www.hani.co.kr/arti/society/home01.html"
+            self.article_url = "https://www.asiae.co.kr/list/society-all"
             self.choose_category = 3
         self.crawling()
         
@@ -127,7 +139,7 @@ class hangyere_crawling:
         with urllib.request.urlopen(url) as response:
             html = response.read()
             soup = BeautifulSoup(html, 'html.parser', from_encoding='utf-8')
-            article_content = soup.find("div",{"class":"text"})
+            article_content = soup.find("div",{"class":"article_view"})
             text = ""
             try:
                 text = text + ' '+ article_content.get_text(' ', strip=True)
@@ -168,8 +180,8 @@ if __name__ == "__main__":
     # category_crawling( 카테고리 번호 )에서 카테고리 번호를 넣어준다(외부에서 받아올 예정)
     # 그리고 그 번호를 get_news에다가도 넣어준다
 
-    A = hangyere_crawling()
-    A.category_crawling(3)
+    A = AsiaMoney_crawling()
+    A.category_crawling(1)
     ll = A.get_news()
 
  
