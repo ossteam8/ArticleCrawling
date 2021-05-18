@@ -12,7 +12,7 @@ from datetime import datetime
 from dateutil.relativedelta import relativedelta
 from categoryparser import Parse_category
 
-class jungang_crawling:
+class Kyeonghang_crawling:
     #type = 1: 카테고리만 입력
 
     def __init__(self): 
@@ -190,7 +190,7 @@ if __name__ == "__main__":
     # category_crawling( 카테고리 번호 )에서 카테고리 번호를 넣어준다(외부에서 받아올 예정)
     # 그리고 그 번호를 get_news에다가도 넣어준다
 
-    A = jungang_crawling()
+    A = Kyeonghang_crawling()
     A.category_crawling(1)
     ll = A.get_news()
 
