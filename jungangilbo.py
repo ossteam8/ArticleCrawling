@@ -11,7 +11,7 @@ import urllib.parse
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 from categoryparser import Parse_category
-
+from urllib.request import Request, urlopen
 class jungang_crawling:
     #type = 1: 카테고리만 입력
     #type = 2: 검색어만 입력
@@ -39,99 +39,69 @@ class jungang_crawling:
         before_one_week =  self.get_date(before_one_week) # 일주 전을 의미
         while(not News_end):
             print(self.article_url)
-            with urllib.request.urlopen(self.article_url) as response:
+            req = Request(self.article_url,headers={'User-Agent': 'Mozilla/5.0'})
+            try:
+                with urlopen(req) as response:
                 
-                html = response.read()
-                soup = BeautifulSoup(html, 'html.parser', from_encoding='utf-8')
+                    html = response.read()
+                    soup = BeautifulSoup(html, 'html.parser', from_encoding='utf-8')
 
-                #기사의 url들을 파싱하는 부분
-                #if self.type==1:
-                    # article_list = soup.find("div",{"id":"body"})
+                    try:
+                        article_list = soup.find("div",{"class":"list_basic"})
+
+                        article_list = article_list.find("ul")
+
+                        article_list = article_list.find_all("li")
                     
-                    # article_list = article_list.find("div",{"id":"content"})
+                        for article in article_list:
+                            #if(self.type==1): # 카테고리만 일때만 이것을 시행
+                            article_time = article.find("span",{"class":"byline"}).string # 날짜를 읽어옴
+                            article_time = self.get_date(article_time)
+                            if(int(article_time)<int(before_one_week)): # 일주 전까지의 자료만 필요하다
+                                return 
 
-                article_list = soup.find("div",{"class":"list_basic"})
-                                    
-                article_list = article_list.find("ul")
-                
-                article_list = article_list.find_all("li")
-                #else:
-                #    
-                #    article_list = soup.find("div",{"id":"content"})
-                #
-                #    try:
-                #        article_list = article_list.find("div",{"class":"section_news"})
-                #        article_list = article_list.find("ul")
-                #        article_list = article_list.find_all("li")
-                #    except:
-                #        self.check_valid=False
-                #        return    
-                   
+                            link = article.find("a")
+                            self.urls.append(link['href'])
+                            print(link['href'])
+                    except:
+                        print("error1")
+                        return
 
-                    # check_valid = article_list.find("div",{"class":"hd"})
-                    # check_valid = check_valid.find("h3").string
-                    # if(check_valid=="검색결과 없음"):
-                    #     self.check_valid=False
-                    #     return
-                    #article_list = article_list.find("div",{"calss":"bd"})
+                    #try:
+                    next_url = ""
+                    try:
+                        pages = soup.find("div",{"class":"paging_comm"})
 
-                    # article_list = article_list.find_all("li")
-             #       print(article_list)
-                try:
-                    for article in article_list:
-                        #if(self.type==1): # 카테고리만 일때만 이것을 시행
-                        article_time = article.find("span",{"class":"byline"}).string # 날짜를 읽어옴
-                        article_time = self.get_date(article_time)
-                        if(int(article_time)<int(before_one_week)): # 일주 전까지의 자료만 필요하다
-                            return 
-                        
-                        link = article.find("a")
-                        self.urls.append(link['href'])
-                        print(link['href'])
-                except:
-                    print("error1")
-                    return
-                
-                #try:
-                next_url = ""
-                #if self.type==1:
-                    # pages = soup.find("div",{"id":"content"})
-                pages = soup.find("div",{"class":"paging_comm"})
-                    #pass
-                #else:
-                #    pages = soup.find("div",{"class":"section_news"})
-                #    pages = pages.find("div",{"class":"ft"})
-                #    pages = pages.find("div",{"class":"paging_comm"})
+                        current_page = pages.find("em")
+                        current_page = current_page.string # 현재 페이지 번호
 
-                
-                current_page = pages.find("em")
-                current_page = current_page.string # 현재 페이지 번호
-                
-                next_button = pages.find_all("span",{"class":"icon"})
-                next_button = next_button[1]
-                #next_button = pages.find("a",{"class":"btn_next"})
-                pages = pages.find_all("a",{"class":"link_page"})
-                
-                #print(pages)
-                for page in pages:
-                    #print(next_button)
-                    if(int(current_page)<=int(page.string)):
-                        next_url = page['href']
-                        break
-                if(next_url!=""):
-                    pass
-                elif next_button.string=="다음페이지":
-                    next_url = next_button.parent['href']
-                elif next_button.string == "다음페이지 없음":
-                    News_end = True
-                if(not News_end):
-                    self.article_url = "https://news.joins.com" + next_url
+                        next_button = pages.find_all("span",{"class":"icon"})
+                        next_button = next_button[1]
+                        #next_button = pages.find("a",{"class":"btn_next"})
+                        pages = pages.find_all("a",{"class":"link_page"})
 
-                #except:
-                #    print("error2")
-                #    return
+                        #print(pages)
+                        for page in pages:
+                            #print(next_button)
+                            if(int(current_page)<=int(page.string)):
+                                next_url = page['href']
+                                break
+                        if(next_url!=""):
+                            pass
+                        elif next_button.string=="다음페이지":
+                            next_url = next_button.parent['href']
+                        elif next_button.string == "다음페이지 없음":
+                            News_end = True
+                        if(not News_end):
+                            self.article_url = "https://news.joins.com" + next_url
+                    except:
+                        print('페이징 실패')
+                        return
 
 
+            except:
+                print('사이트 접속 오류')
+                return
 
 
     def category_crawling(self, choose_category):
@@ -165,17 +135,21 @@ class jungang_crawling:
 
 
     def read_article_contents(self,url):
-        with urllib.request.urlopen(url) as response:
-            html = response.read()
-            soup = BeautifulSoup(html, 'html.parser', from_encoding='utf-8')
-            article_content = soup.find("div",{"id":"article_body"})
-            text = ""
-            try:
-                text = text + ' '+ article_content.get_text(' ', strip=True)
-            except:
-                print("error" , url)
+        req = Request(url,headers={'User-Agent': 'Mozilla/5.0'})
+        try:
+            with urlopen(req) as response:
+                html = response.read()
+                soup = BeautifulSoup(html, 'html.parser', from_encoding='utf-8')
+                article_content = soup.find("div",{"id":"article_body"})
+                text = ""
+                try:
+                    text = text + ' '+ article_content.get_text(' ', strip=True)
+                except:
+                    print("error" , url)
 
-            return text
+                return text
+        except:
+            return ""
     
 
 
@@ -186,28 +160,14 @@ class jungang_crawling:
         for url in self.urls:
             
             checkc = True
-            #c = Parse_category(url)
-            #category = c.parsing_category()
-            #if(category=="no category"):
-            #    continue
-            #if(self.type==1 or self.type==3):
-            #    for i in categories:
-            #        checkc=False
-            #        if self.categories[i-1]==category: #넣은 것들중 일치하는 것이 있다면
-            #            checkc = True
-            #            break
-            #    if(not checkc):
-            #        continue
-            #print(category)
             category = self.categories[self.choose_category-1]
             g = Goose({'stopwords_class':StopWordsKorean})
             article = g.extract(url=url)
             title = article.title
             #print(title)
             content = self.read_article_contents(url)
-            #print(article.cleaned_text[:150])
-            
-            #print(content)
+            if(content==""):
+                continue
             self.article_info["category"] = category
             self.article_info["content"] = content
             self.article_info["title"] = title

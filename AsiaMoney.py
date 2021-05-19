@@ -11,6 +11,7 @@ import urllib.parse
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 from categoryparser import Parse_category
+from urllib.request import Request, urlopen
 
 class AsiaMoney_crawling:
     #type = 1: 카테고리만 입력
@@ -36,85 +37,91 @@ class AsiaMoney_crawling:
         while(not News_end):
             first_num = True
             print(self.article_url)
-            with urllib.request.urlopen(self.article_url) as response:
-                
-                html = response.read()
-                soup = BeautifulSoup(html, 'html.parser', from_encoding='utf-8')
-                
-                #기사의 url들을 파싱하는 부분
-            
+            req = Request(self.article_url,headers={'User-Agent': 'Mozilla/5.0'})
+            try:
+                with urlopen(req) as response:
 
-                article_list = soup.find("div",{"class":"content"})
-                #article_list = article_list.find("div",{"class":"section-list-area"})# 안된다면 이부분을 넣자
-                
-                
-                try:
-                    first_article = article_list.find("div",{"class":"list_type"})
-                    article_list = article_list.find_all("div",{"class":"listsm_type"})
-                    
-                except:
-                    self.check_valid=False
-                    print("리스트 읽어오기 실패")
-                    return    
-                   
-                try:
-                    #print(article_list[-1])
+                    html = response.read()
+                    soup = BeautifulSoup(html, 'html.parser', from_encoding='utf-8')
 
-                    for article in article_list:
-                        if(first_num):
-                            f_article = first_article.find("a")
-                            f_time = first_article.find("span",{"class":"txt_time"}).string
-                            if(not self.one_day_crawling(f_time)):
-                                return
-                            link = 'https:'+ f_article['href']
+                    #기사의 url들을 파싱하는 부분
+
+
+                    article_list = soup.find("div",{"class":"content"})
+                    #article_list = article_list.find("div",{"class":"section-list-area"})# 안된다면 이부분을 넣자
+
+
+                    try:
+                        first_article = article_list.find("div",{"class":"list_type"})
+                        article_list = article_list.find_all("div",{"class":"listsm_type"})
+
+                    except:
+                        self.check_valid=False
+                        print("리스트 읽어오기 실패")
+                        return    
+
+                    try:
+                        #print(article_list[-1])
+
+                        for article in article_list:
+                            if(first_num):
+                                f_article = first_article.find("a")
+                                f_time = first_article.find("span",{"class":"txt_time"}).string
+                                if(not self.one_day_crawling(f_time)):
+                                    return
+                                link = 'https:'+ f_article['href']
+                                self.urls.append(link)
+
+                            article_time = article.find("span",{"class":"txt_time"}).string
+                            if(not self.one_day_crawling(article_time)):
+                                    return
+                            article = article.find("a")
+                            link = 'https:'+ article['href']
+
                             self.urls.append(link)
+                            print(link)
+                    except:
+                        print("url 찾기 실패")
+                        return
 
-                        article_time = article.find("span",{"class":"txt_time"}).string
-                        if(not self.one_day_crawling(article_time)):
-                                return
-                        article = article.find("a")
-                        link = 'https:'+ article['href']
+                    #try:
+                    next_url = ""
 
-                        self.urls.append(link)
-                        print(link)
-                except:
-                    print("url 찾기 실패")
-                    return
-                
-                #try:
-                next_url = ""
+                    pages = soup.find("div",{"class":"content"})
+                    #pages = pages.find("span",{"class":"inner_paging"})
+                    #print(pages)
+                    try:
+                        current_page = pages.find("span",{"class":"link_page"}).string# 현재 페이지 찾음
+    
+                        #print(current_page)
+                        next_button = pages.find("a",{"class":"btn_next"})
+    
+    
+                        pages = pages.find_all("a",{"class":"link_page"})
+                    
+                        for page in pages:
 
-                pages = soup.find("div",{"class":"content"})
-                #pages = pages.find("span",{"class":"inner_paging"})
-                #print(pages)
-                current_page = pages.find("span",{"class":"link_page"}).string# 현재 페이지 찾음
-                
-                #print(current_page)
-                next_button = pages.find("a",{"class":"btn_next"})
+                            if(int(current_page)<int(page.string)):
+                                next_url = page.string
+                                break
+                        if(next_url!=""):
+                            pass
+                        else: #다음 화살표 누르기
+                            next_url = str(int(current_page)+1)
+                        if(not News_end):
+                            if(self.choose_category==1):
+                                self.article_url = "https://www.asiae.co.kr/list/politics-all/"+next_url
+                            elif(self.choose_category==2):
+                                self.article_url="https://www.asiae.co.kr/list/economy-all/"+next_url
+                            else:
+                                self.article_url = "https://www.asiae.co.kr/list/society-all/"+next_url
 
-                
-                pages = pages.find_all("a",{"class":"link_page"})
-                try:
-                    for page in pages:
-                        
-                        if(int(current_page)<int(page.string)):
-                            next_url = page.string
-                            break
-                    if(next_url!=""):
-                        pass
-                    else: #다음 화살표 누르기
-                        next_url = str(int(current_page)+1)
-                    if(not News_end):
-                        if(self.choose_category==1):
-                            self.article_url = "https://www.asiae.co.kr/list/politics-all/"+next_url
-                        elif(self.choose_category==2):
-                            self.article_url="https://www.asiae.co.kr/list/economy-all/"+next_url
-                        else:
-                            self.article_url = "https://www.asiae.co.kr/list/society-all/"+next_url
-                        
-                except:
-                    print("페이지 이동 실패")
-                    return
+                    except:
+                        print("페이지 이동 실패")
+                        return
+            except:
+                print('접속오류')
+                return
 
 
 
@@ -136,17 +143,21 @@ class AsiaMoney_crawling:
         
 
     def read_article_contents(self,url):
-        with urllib.request.urlopen(url) as response:
-            html = response.read()
-            soup = BeautifulSoup(html, 'html.parser', from_encoding='utf-8')
-            article_content = soup.find("div",{"class":"article_view"})
-            text = ""
-            try:
-                text = text + ' '+ article_content.get_text(' ', strip=True)
-            except:
-                print("error" , url)
+        req = Request(url,headers={'User-Agent': 'Mozilla/5.0'})
+        try:
+            with urlopen(req) as response:
+                html = response.read()
+                soup = BeautifulSoup(html, 'html.parser', from_encoding='utf-8')
+                article_content = soup.find("div",{"class":"article_view"})
+                text = ""
+                try:
+                    text = text + ' '+ article_content.get_text(' ', strip=True)
+                except:
+                    print("error" , url)
 
-            return text
+                return text
+        except:
+            return ""
     
 
 
@@ -163,6 +174,8 @@ class AsiaMoney_crawling:
             title = article.title
             #print(title)
             content = self.read_article_contents(url)
+            if content == "":
+                continue
             print(content)
             self.article_info["category"] = category
             self.article_info["content"] = content

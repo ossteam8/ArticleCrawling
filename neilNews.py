@@ -11,7 +11,7 @@ import urllib.parse
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 from categoryparser import Parse_category
-
+from urllib.request import Request, urlopen
 class NeilNews_crawling:
     #type = 1: 카테고리만 입력
 
@@ -39,71 +39,76 @@ class NeilNews_crawling:
         before_one_week =  self.get_date(before_one_week) # 일주 전을 의미
         while(not News_end):
             print(self.article_url)
-            with urllib.request.urlopen(self.article_url) as response:
+            req = Request(self.article_url,headers={'User-Agent': 'Mozilla/5.0'})
+            try:
+                with urlopen(req) as response:
                 
-                html = response.read()
-                soup = BeautifulSoup(html, 'html.parser', from_encoding='utf-8')
-                
-                #기사의 url들을 파싱하는 부분
-            
+                    html = response.read()
+                    soup = BeautifulSoup(html, 'html.parser', from_encoding='utf-8')
 
-                article_list = soup.find("div",{"id":"wrap"})
-                #article_list = article_list.find("div",{"class":"section-list-area"})# 안된다면 이부분을 넣자
-                
-                
-                try:
-                    article_list = article_list.find_all("div",{"class":"newsList08"})
+                    #기사의 url들을 파싱하는 부분
+
+
+                    article_list = soup.find("div",{"id":"wrap"})
+                    #article_list = article_list.find("div",{"class":"section-list-area"})# 안된다면 이부분을 넣자
+
+
+                    try:
+                        article_list = article_list.find_all("div",{"class":"newsList08"})
+
+                    except:
+                        self.check_valid=False
+                        print("리스트 읽어오기 실패")
+                        return    
+
+                    try:
+                        #print(article_list[-1])
+                        for article in article_list:
+
+                            article_time = article.find("dd",{"class":"date"}).string
+                            article_time = self.get_date(article_time)
+                            if(int(article_time)<int(before_one_week)): # 내가 원하는 요일까지의 자료만 필요하다
+                                return 
+
+                            link = article.find("a")
+                            link = "http://www.naeil.com"+link['href']
+                            self.urls.append(link)
+                            print(link)
+                    except:
+                        print("url 찾기 실패")
+                        return
+
+                    #try:
+                    next_url = ""
+                    try:
+                        pages = soup.find("div",{"id":"wrap"})
+                        pages = pages.find("div",{"class":"numArea"})
+                        current_page = pages.find("span",{"class":"on"}).string  # 현재 페이지 찾음
+                        #print(current_page)
+                        next_button = pages.find("img",{"alt":"next"}).parent
+                        #print(next_button)
+
+                        pages = pages.find_all("span")
                     
-                except:
-                    self.check_valid=False
-                    print("리스트 읽어오기 실패")
-                    return    
-                   
-                try:
-                    #print(article_list[-1])
-                    for article in article_list:
-                        
-                        article_time = article.find("dd",{"class":"date"}).string
-                        article_time = self.get_date(article_time)
-                        if(int(article_time)<int(before_one_week)): # 내가 원하는 요일까지의 자료만 필요하다
-                            return 
-                        
-                        link = article.find("a")
-                        link = "http://www.naeil.com"+link['href']
-                        self.urls.append(link)
-                        print(link)
-                except:
-                    print("url 찾기 실패")
-                    return
-                
-                #try:
-                next_url = ""
+                        for page in pages:
+                            page = page.find("a")
 
-                pages = soup.find("div",{"id":"wrap"})
-                pages = pages.find("div",{"class":"numArea"})
-                current_page = pages.find("span",{"class":"on"}).string  # 현재 페이지 찾음
-                #print(current_page)
-                next_button = pages.find("img",{"alt":"next"}).parent
-                #print(next_button)
-                
-                pages = pages.find_all("span")
-                try:
-                    for page in pages:
-                        page = page.find("a")
-
-                        if page.string != "다음으로" and page.string!="이전으로":
-                            if(int(current_page)<int(page.string)):
-                                next_url = page['href']
-                                break
-                    if(next_url!=""):
-                        pass
-                    else: #다음 화살표 누르기
-                        next_url = next_button['href']
-                    if(not News_end):
-                        self.article_url = "http://www.naeil.com"+next_url
-                except:
-                    print("페이지 이동 실패")
-                    return
+                            if page.string != "다음으로" and page.string!="이전으로":
+                                if(int(current_page)<int(page.string)):
+                                    next_url = page['href']
+                                    break
+                        if(next_url!=""):
+                            pass
+                        else: #다음 화살표 누르기
+                            next_url = next_button['href']
+                        if(not News_end):
+                            self.article_url = "http://www.naeil.com"+next_url
+                    except:
+                        print("페이지 이동 실패")
+                        return
+            except:
+                print('사이트접속실패')
+                return
 
 
 
@@ -126,17 +131,22 @@ class NeilNews_crawling:
         
 
     def read_article_contents(self,url):
-        with urllib.request.urlopen(url) as response:
-            html = response.read()
-            soup = BeautifulSoup(html, 'html.parser', from_encoding='utf-8')
-            article_content = soup.find("div",{"class":"article"})
-            text = ""
-            try:
-                text = text + ' '+ article_content.get_text(' ', strip=True)
-            except:
-                print("error" , url)
+        req = Request(url,headers={'User-Agent': 'Mozilla/5.0'})
+        try:
+            with urlopen(req) as response:
+                html = response.read()
+                soup = BeautifulSoup(html, 'html.parser', from_encoding='utf-8')
+                article_content = soup.find("div",{"class":"article"})
+                text = ""
+                try:
+                    text = text + ' '+ article_content.get_text(' ', strip=True)
+                except:
+                    print("error" , url)
 
-            return text
+                return text
+
+        except:
+            return ""
     
 
 
@@ -153,6 +163,8 @@ class NeilNews_crawling:
             title = article.title
             #print(title)
             content = self.read_article_contents(url)
+            if content=="":
+                continue
             print(content)
             self.article_info["category"] = category
             self.article_info["content"] = content

@@ -94,16 +94,16 @@ class Kyeonghang_crawling:
                     print("url 찾기 실패")
                     return
                 
-                #try:
-                next_url = ""
-
-                pages = soup.find("div",{"id":"container"})
-                pages = pages.find("div",{"class":"paging"})
-                current_page = pages.find("a",{"class":"on"}).string  # 현재 페이지 찾음
-                next_button = pages.find("a",{"class":"next"})
-                
-                pages = pages.find_all("a")
                 try:
+                    next_url = ""
+
+                    pages = soup.find("div",{"id":"container"})
+                    pages = pages.find("div",{"class":"paging"})
+                    current_page = pages.find("a",{"class":"on"}).string  # 현재 페이지 찾음
+                    next_button = pages.find("a",{"class":"next"})
+
+                    pages = pages.find_all("a")
+                
                     for page in pages:
                         
                         if page.string != "이전" and page.string !="다음":
@@ -145,18 +145,21 @@ class Kyeonghang_crawling:
 
     def read_article_contents(self,url):
         req = Request(url,headers={'User-Agent': 'Mozilla/5.0'})
-        with urlopen(req) as response:
-            html = response.read()
-            soup = BeautifulSoup(html, 'html.parser', from_encoding='utf-8')
-            article_contents = soup.find_all("p",{"class":"content_text"})
-            text = ""
-            for article_content in article_contents:
-                try:
-                    text = text + ' '+ article_content.get_text(' ', strip=True)
-                except:
-                    print("error" , url)
+        try:
+            with urlopen(req) as response:
+                html = response.read()
+                soup = BeautifulSoup(html, 'html.parser', from_encoding='utf-8')
+                article_contents = soup.find_all("p",{"class":"content_text"})
+                text = ""
+                for article_content in article_contents:
+                    try:
+                        text = text + ' '+ article_content.get_text(' ', strip=True)
+                    except:
+                        print("error" , url)
 
-            return text
+                return text
+        except:
+            return ""
     
 
 
@@ -173,6 +176,8 @@ class Kyeonghang_crawling:
             title = article.title
             #print(title)
             content = self.read_article_contents(url)
+            if content == "":
+                continue
             print(content)
             self.article_info["category"] = category
             self.article_info["content"] = content

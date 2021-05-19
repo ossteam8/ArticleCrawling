@@ -11,6 +11,7 @@ import urllib.parse
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 from categoryparser import Parse_category
+from urllib.request import Request, urlopen
 
 class donga_crawling:
     #type = 1: 카테고리만 입력
@@ -37,79 +38,83 @@ class donga_crawling:
 
         while(not News_end):
             print(self.article_url)
-            with urllib.request.urlopen(self.article_url) as response:
+            req = Request(self.article_url,headers={'User-Agent': 'Mozilla/5.0'})
+            try:
+                with urlopen(req) as response:
                 
-                html = response.read()
-                soup = BeautifulSoup(html, 'html.parser', from_encoding='utf-8')
-                
-                #기사의 url들을 파싱하는 부분
-            
+                    html = response.read()
+                    soup = BeautifulSoup(html, 'html.parser', from_encoding='utf-8')
 
-                article_list = soup.find("div",{"id":"container"})
-                #article_list = article_list.find("div",{"id":"content"})# 안된다면 이부분을 넣자
-                
-                
-                try:
-                    article_list = article_list.find_all("div",{"class":"articleList"})
+                    #기사의 url들을 파싱하는 부분
+
+
+                    article_list = soup.find("div",{"id":"container"})
+                    #article_list = article_list.find("div",{"id":"content"})# 안된다면 이부분을 넣자
+
+
+                    try:
+                        article_list = article_list.find_all("div",{"class":"articleList"})
+
+                    except:
+                        self.check_valid=False
+                        print("리스트 읽어오기 실패")
+                        return    
+
+                    try:
+                        for article in article_list:
+                            link = article.find("a")
+                            self.urls.append(link['href'])
+                            print(link['href'])
+                    except:
+                        print("url 찾기 실패")
+                        return
+
+                    #try:
+                    next_url = ""
+                    try:
+                        pages = soup.find("div",{"id":"container"})
+                        pages = pages.find("div",{"class":"page"})
+                        current_page = pages.find("strong").string  # 현재 페이지 찾음
+                        next_button = pages.find("a",{"class":"right"})
+
+                        #next_button = pages.find("a",{"class":"btn_next"})
+                        pages = pages.find_all("a")
                     
-                except:
-                    self.check_valid=False
-                    print("리스트 읽어오기 실패")
-                    return    
-                   
-                try:
-                    for article in article_list:
-                        link = article.find("a")
-                        self.urls.append(link['href'])
-                        print(link['href'])
-                except:
-                    print("url 찾기 실패")
-                    return
-                
-                #try:
-                next_url = ""
+                        #print(pages)
+                        for page in pages:
+                            if page.string != "다음" and page.string!="이전":
 
-                pages = soup.find("div",{"id":"container"})
-                pages = pages.find("div",{"class":"page"})
-                current_page = pages.find("strong").string  # 현재 페이지 찾음
-                next_button = pages.find("a",{"class":"right"})
-                
-                #next_button = pages.find("a",{"class":"btn_next"})
-                pages = pages.find_all("a")
-                try:
-                    #print(pages)
-                    for page in pages:
-                        if page.string != "다음" and page.string!="이전":
-                            
-                            if(int(current_page)<=int(page.string)):
-                                
-                                if(self.choose_category == 1):
-                                    next_url =  "https://www.donga.com/news/List/Politics"+page['href']
-                                elif(self.choose_category ==2):
-                                    print('dsd')
-                                    next_url =  "https://www.donga.com/news/List/Economy"+page['href']
-                                else:
-                                    next_url =  "https://www.donga.com/news/List/Society"+page['href']
-                                break
-                    if(next_url!=""):
-                        pass
-                    else: #다음 화살표 누르기
-                        if(str(next_button['href']).startswith('?p=none',0,7)):
-                            print("크롤링 끝")
-                            News_end = True
-                        else:
-                            if(self.choose_category == 1):
-                                next_url =  "https://www.donga.com/news/List/Politics"+str(next_button['href'])
-                            elif(self.choose_category ==2):
-                                next_url =  "https://www.donga.com/news/List/Economy"+str(next_button['href'])
+                                if(int(current_page)<=int(page.string)):
+
+                                    if(self.choose_category == 1):
+                                        next_url =  "https://www.donga.com/news/List/Politics"+page['href']
+                                    elif(self.choose_category ==2):
+                                        print('dsd')
+                                        next_url =  "https://www.donga.com/news/List/Economy"+page['href']
+                                    else:
+                                        next_url =  "https://www.donga.com/news/List/Society"+page['href']
+                                    break
+                        if(next_url!=""):
+                            pass
+                        else: #다음 화살표 누르기
+                            if(str(next_button['href']).startswith('?p=none',0,7)):
+                                print("크롤링 끝")
+                                News_end = True
                             else:
-                                next_url =  "https://www.donga.com/news/List/Society"+str(next_button['href'])
-                    if(not News_end):
-                        self.article_url = next_url
-                except:
-                    print("페이지 이동 실패")
-                    return
-
+                                if(self.choose_category == 1):
+                                    next_url =  "https://www.donga.com/news/List/Politics"+str(next_button['href'])
+                                elif(self.choose_category ==2):
+                                    next_url =  "https://www.donga.com/news/List/Economy"+str(next_button['href'])
+                                else:
+                                    next_url =  "https://www.donga.com/news/List/Society"+str(next_button['href'])
+                        if(not News_end):
+                            self.article_url = next_url
+                    except:
+                        print("페이지 이동 실패")
+                        return
+            except:
+                print('사이트 접속 오류')    
+                return
 
 
 
@@ -131,17 +136,21 @@ class donga_crawling:
         
 
     def read_article_contents(self,url):
-        with urllib.request.urlopen(url) as response:
-            html = response.read()
-            soup = BeautifulSoup(html, 'html.parser', from_encoding='utf-8')
-            article_content = soup.find("div",{"class":"article_txt"})
-            text = ""
-            try:
-                text = text + ' '+ article_content.get_text(' ', strip=True)
-            except:
-                print("error" , url)
+        req = Request(url,headers={'User-Agent': 'Mozilla/5.0'})
+        try:
+            with urlopen(req) as response:
+                html = response.read()
+                soup = BeautifulSoup(html, 'html.parser', from_encoding='utf-8')
+                article_content = soup.find("div",{"class":"article_txt"})
+                text = ""
+                try:
+                    text = text + ' '+ article_content.get_text(' ', strip=True)
+                except:
+                    print("error" , url)
 
-            return text
+                return text
+        except:
+            return ""
     
 
 
@@ -158,6 +167,8 @@ class donga_crawling:
             title = article.title
             print(title)
             content = self.read_article_contents(url)
+            if content =="":
+                continue
             print(content)
             self.article_info["category"] = category
             self.article_info["content"] = content
