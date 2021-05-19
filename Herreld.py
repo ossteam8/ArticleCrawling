@@ -11,8 +11,7 @@ import urllib.parse
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 from categoryparser import Parse_category
-
-
+from urllib.request import Request, urlopen
 
 class Herald_crawling:
     #type = 1: 카테고리만 입력
@@ -42,7 +41,8 @@ class Herald_crawling:
             now = datetime.now()
             before_one_week = now-relativedelta(days=1) # 여기서 days값이 몇일전을의미 테스트용으론 1이 적당
             before_one_week =  self.get_date(before_one_week) # 일주 전을 의미
-            with urllib.request.urlopen(self.article_url) as response:
+            req = Request(self.article_url,headers={'User-Agent': 'Mozilla/5.0'})
+            with urlopen(req) as response:
                 
                 html = response.read()
                 soup = BeautifulSoup(html, 'html.parser', from_encoding='utf-8')
@@ -81,18 +81,18 @@ class Herald_crawling:
                     print("url 찾기 실패")
                     return
                 
-                #try:
-                next_url = ""
-
-                pages = soup.find("div",{"class":"list_l"})
-                pages = pages.find("div",{"class":"page_wrap"})
-                current_page = pages.find("a",{"class":"active"}).string  # 현재 페이지 찾음
-                print(current_page)
-                next_button = pages.find("a",{"class":"next"})
-                
-                #next_button = pages.find("a",{"class":"btn_next"})
-                pages = pages.find_all("a")
                 try:
+                    next_url = ""
+
+                    #pages = soup.find("div",{"class":"list_l"})
+                    pages = soup.find("div",{"class":"page_wrap"})
+                    current_page = pages.find("a",{"class":"active"}).string  # 현재 페이지 찾음
+                    print(current_page)
+                    next_button = pages.find("a",{"class":"next"})
+
+                    #next_button = pages.find("a",{"class":"btn_next"})
+                    pages = pages.find_all("a")
+                
 
                     for page in pages:
                         if page.string!=None:
@@ -134,17 +134,22 @@ class Herald_crawling:
         
 
     def read_article_contents(self,url):
-        with urllib.request.urlopen(url) as response:
-            html = response.read()
-            soup = BeautifulSoup(html, 'html.parser', from_encoding='utf-8')
-            article_content = soup.find("div",{"id":"articleText"})
-            text = ""
-            try:
-                text = text + ' '+ article_content.get_text(' ', strip=True)
-            except:
-                print("error" , url)
 
-            return text
+        req = Request(url,headers={'User-Agent': 'Mozilla/5.0'})
+        try:
+            with urlopen(req) as response:
+                html = response.read()
+                soup = BeautifulSoup(html, 'html.parser', from_encoding='utf-8')
+                article_content = soup.find("div",{"id":"articleText"})
+                text = ""
+                try:
+                    text = text + ' '+ article_content.get_text(' ', strip=True)
+                except:
+                    print("error" , url)
+
+                return text
+        except:
+            return ""                
     
 
 
@@ -161,7 +166,8 @@ class Herald_crawling:
             title = article.title
             #print(title)
             content = self.read_article_contents(url)
-            print(content)
+            if content == "":
+                continue
             self.article_info["category"] = category
             self.article_info["content"] = content
             self.article_info["title"] = title
@@ -179,7 +185,7 @@ if __name__ == "__main__":
     # 그리고 그 번호를 get_news에다가도 넣어준다
 
     A = Herald_crawling()
-    A.category_crawling(3)
+    A.category_crawling(2)
     ll = A.get_news()
 
  
