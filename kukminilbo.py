@@ -11,7 +11,7 @@ import urllib.parse
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 from categoryparser import Parse_category
-
+from urllib.request import Request, urlopen
 class Kukmin_crawling:
     #type = 1: 카테고리만 입력
 

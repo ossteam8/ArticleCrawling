@@ -11,7 +11,7 @@ import urllib.parse
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 from categoryparser import Parse_category
-
+from urllib.request import Request, urlopen
 class MoneyToday_crawling:
     #type = 1: 카테고리만 입력
 
@@ -39,86 +39,88 @@ class MoneyToday_crawling:
         before_one_week =  self.get_date(before_one_week) # 일주 전을 의미
         while(not News_end):
             print(self.article_url)
-            with urllib.request.urlopen(self.article_url) as response:
+            req = Request(self.article_url,headers={'User-Agent': 'Mozilla/5.0'})
+            try:
+                with urlopen(req) as response:
                 
-                html = response.read()
-                soup = BeautifulSoup(html, 'html.parser', from_encoding='utf-8')
-                
-                #기사의 url들을 파싱하는 부분
-            
+                    html = response.read()
+                    soup = BeautifulSoup(html, 'html.parser', from_encoding='utf-8')
 
-                article_list = soup.find("div",{"id":"content"})
-                #article_list = article_list.find("div",{"class":"section-list-area"})# 안된다면 이부분을 넣자
-                
-                
-                try:
-                    article_list = article_list.find("ul",{"class":"conlist_p1"})
-                    article_list = article_list.find_all("li")
-                except:
-                    self.check_valid=False
-                    print("리스트 읽어오기 실패")
-                    return    
-                   
-                try:
-                    #print(article_list[-1])
-                    for article in article_list:
-                        
-
-                        article_time = article.find("span",{"class":"etc"}).string
-
-                        meta = re.compile(r'\d{4}[.]\d{2}[.]\d{2}')
-                        for i in meta.findall(article_time):
-                            article_time = i
-
-                        article_time = self.get_date(article_time)
-                        print(article_time)
-                        if(int(article_time)<int(before_one_week)): # 내가 원하는 요일까지의 자료만 필요하다
-                            return 
-                        
-                        link = article.find("a")
-                        link = link['href']
-                        self.urls.append(link)
-                        print(link)
-                except:
-                    print("url 찾기 실패")
-                    return
-                
-                #try:
-                next_url = ""
-
-                pages = soup.find("div",{"id":"content"})
-                pages = pages.find("div",{"id":"paging_t17"})
-                print(pages)
-                current_page = pages.find("span",{"class":"num"})# 현재 페이지 찾음
-                current_page = current_page.find("strong").string
-                #print(current_page)
-                next_button = pages.find("button",{"class":"next"})
-
-                
-                pages = pages.find_all("a")
-                try:
-                    for page in pages:
-                        
-                        if(int(current_page)<int(page.string)):
-                            next_url = page['href']
-                            break
-                    if(next_url!=""):
-                        pass
-                    else: #다음 화살표 누르기
-                        print(next_button)
-                        next_url = next_button['onclick']
-                        print(next_url)
-                        next_url = next_url[26:]
-                        next_url = next_url[:len(next_url)-2]
-                        print(next_url)
-                    if(not News_end):
-                        print(next_url)
-                        self.article_url = "https://news.mt.co.kr"+next_url
-                except:
-                    print("페이지 이동 실패")
-                    return
+                    #기사의 url들을 파싱하는 부분
 
 
+                    article_list = soup.find("div",{"id":"content"})
+                    #article_list = article_list.find("div",{"class":"section-list-area"})# 안된다면 이부분을 넣자
+
+
+                    try:
+                        article_list = article_list.find("ul",{"class":"conlist_p1"})
+                        article_list = article_list.find_all("li")
+                    except:
+                        self.check_valid=False
+                        print("리스트 읽어오기 실패")
+                        return    
+
+                    try:
+                        #print(article_list[-1])
+                        for article in article_list:
+
+
+                            article_time = article.find("span",{"class":"etc"}).string
+
+                            meta = re.compile(r'\d{4}[.]\d{2}[.]\d{2}')
+                            for i in meta.findall(article_time):
+                                article_time = i
+
+                            article_time = self.get_date(article_time)
+                            print(article_time)
+                            if(int(article_time)<int(before_one_week)): # 내가 원하는 요일까지의 자료만 필요하다
+                                return 
+
+                            link = article.find("a")
+                            link = link['href']
+                            self.urls.append(link)
+                            print(link)
+                    except:
+                        print("url 찾기 실패")
+                        return
+
+                    #try:
+                    next_url = ""
+                    try:
+                        pages = soup.find("div",{"id":"content"})
+                        pages = pages.find("div",{"id":"paging_t17"})
+                        current_page = pages.find("span",{"class":"num"})# 현재 페이지 찾음
+                        current_page = current_page.find("strong").string
+                        #print(current_page)
+                        next_button = pages.find("button",{"class":"next"})
+
+
+                        pages = pages.find_all("a")
+                    
+                        for page in pages:
+
+                            if(int(current_page)<int(page.string)):
+                                next_url = page['href']
+                                break
+                        if(next_url!=""):
+                            pass
+                        else: #다음 화살표 누르기
+
+                            next_url = next_button['onclick']
+
+                            next_url = next_url[26:]
+                            next_url = next_url[:len(next_url)-2]
+                        if(not News_end):
+                            print(next_url)
+                            self.article_url = "https://news.mt.co.kr"+next_url
+                    except:
+                        print("페이지 이동 실패")
+                        return
+
+            except:
+                print('사이트 접속 실패')
+                return
 
 
     def category_crawling(self, choose_category):
@@ -139,18 +141,21 @@ class MoneyToday_crawling:
         
 
     def read_article_contents(self,url):
-        with urllib.request.urlopen(url) as response:
-            html = response.read()
-            soup = BeautifulSoup(html, 'html.parser', from_encoding='utf-8')
-            article_content = soup.find("div",{"id":"textBody"})
-            text = ""
-            try:
-                text = text + ' '+ article_content.get_text(' ', strip=True)
-            except:
-                print("error" , url)
+        req = Request(url,headers={'User-Agent': 'Mozilla/5.0'})
+        try:
+            with urlopen(req) as response:
+                html = response.read()
+                soup = BeautifulSoup(html, 'html.parser', from_encoding='utf-8')
+                article_content = soup.find("div",{"class":"view_text"})
+                text = ""
+                try:
+                    text = text + ' '+ article_content.get_text(' ', strip=True)
+                except:
+                    print("error" , url)
 
-            return text
-    
+                return text
+        except:
+            return ""
 
 
 
@@ -166,6 +171,8 @@ class MoneyToday_crawling:
             title = article.title
             #print(title)
             content = self.read_article_contents(url)
+            if content == "":
+                continue
             print(content)
             self.article_info["category"] = category
             self.article_info["content"] = content
