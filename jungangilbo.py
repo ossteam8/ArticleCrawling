@@ -12,7 +12,7 @@ from datetime import datetime
 from dateutil.relativedelta import relativedelta
 from categoryparser import Parse_category
 from urllib.request import Request, urlopen
-class jungang_crawling:
+class Jungang_crawling:
     #type = 1: 카테고리만 입력
     #type = 2: 검색어만 입력
     #type=3 : 카테고리 + 검색어
@@ -184,7 +184,7 @@ if __name__ == "__main__":
     # category_crawling( 카테고리 번호 )에서 카테고리 번호를 넣어준다(외부에서 받아올 예정)
     # 그리고 그 번호를 get_news에다가도 넣어준다
 
-    A = jungang_crawling()
+    A = Jungang_crawling()
     A.category_crawling(2)
     ll = A.get_news(2)
     print(len(ll))
