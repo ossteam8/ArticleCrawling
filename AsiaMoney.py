@@ -178,7 +178,7 @@ class AsiaMoney_crawling:
                 continue
             print(content)
             self.article_info["category"] = category
-            self.article_info["content"] = content
+            self.article_info["contents"] = content
             self.article_info["title"] = title
             self.article_info["url"] = url
             self.articles.append(self.article_info)
