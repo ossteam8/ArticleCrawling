@@ -14,5 +14,5 @@ YTN
 동아일보
 아시아머니로 총 10개입니다
 
-**이 레포지스토리는 K-news-keyword-summarizer 레포지스토리로 merge되었습니다. 이후의 업데이트나 커밋은 전부 K-news-keyword-summarizer로 했기 때문에 거기서 확인해주시면 될것 같습니다**
+**이 레포지스토리는 K-news-keyword-summarizer 레포지스토리로 merge되었습니다. 이후의 업데이트나 커밋은 전부 K-news-keyword-summarizer로 했기 때문에 거기서 확인해주시면 될것 같습니다**  
 [K-news-keyword-summarizer레포지스토리](https://github.com/ossteam8/K-news-keyword-summarizer)
